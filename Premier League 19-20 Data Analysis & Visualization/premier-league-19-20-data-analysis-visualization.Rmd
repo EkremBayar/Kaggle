@@ -1,0 +1,227 @@
+---
+title: "Premier League 2019-2020 Data Analysis & Visualization"
+subtitle: 'Football, Sports Analytics'
+author: 
+  name: "Ekrem Bayar"
+date: '`r Sys.Date()`'
+output:
+  html_document:
+    toc: yes
+    number_sections: yes
+    code_folding: hide
+    theme: spacelab
+    highlight: tango
+---
+
+# **Packages**
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(readxl)
+library(GGally)
+library(gridExtra)
+library(DT)
+install.packages("ggimage")
+library(ggimage)
+```
+
+# **Data**
+```{r message=FALSE, warning=FALSE}
+df <- read_excel("../input/premier-league-match-reports-20192020/premierLeague.xlsx", col_types = c("text", 
+    "date", "text", "text", "text", "text", 
+    "numeric", "numeric", "numeric", "numeric", 
+    "numeric", "numeric", "numeric", "numeric", 
+    "numeric", "numeric", "numeric", "numeric", 
+    "numeric", "numeric", "numeric", "numeric", 
+    "numeric", "numeric", "numeric", "numeric", 
+    "numeric", "numeric", "numeric", "numeric", 
+    "numeric", "numeric", "numeric"))
+
+datatable(df)
+```
+
+# **Correlation**
+```{r message=FALSE, warning=FALSE, fig.width=15, fig.height=10}
+ggcorr(df %>% 
+  select_if(is.numeric) %>% 
+  select(-Penalties),label = TRUE, digits = 1,low = "khaki", high = "seagreen")
+```
+
+
+# **Number of Managers & Captains**
+```{r message=FALSE, warning=FALSE, fig.width=15, fig.height=10}
+p1 <- df %>% 
+  group_by(Team) %>% 
+  summarise(Manager = length(unique(Manager))) %>% 
+  ungroup() %>% 
+  arrange(-Manager) %>% 
+  mutate(Cat = case_when(
+    Manager == 1 ~ "1",
+    Manager == 2 ~ "2",
+    Manager == 3 ~ "3",
+    Manager > 3 ~ "4+"
+  )) %>% 
+  ggplot(aes(reorder(Team, Manager), Manager, fill = Cat))+
+  geom_col()+
+  coord_flip()+
+  labs(x = NULL, x = NULL, fill = "Number of Managers", title = "Number of Managers")+
+  theme(
+    panel.background = element_rect(fill = "darkgray"),
+    plot.background = element_rect(fill = "darkgray", color = "darkgray"),
+    legend.background = element_rect(fill = "darkgray"),
+    legend.key = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    legend.position = "bottom",
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5, color = "darkslategray")
+  )+
+  scale_fill_manual(values = c("white", "steelblue", "seagreen","firebrick"))
+
+
+p2 <- df %>% 
+  group_by(Team) %>% 
+  summarise(Captain = length(unique(Captain))) %>% 
+  ungroup() %>% 
+  arrange(-Captain) %>% 
+  ggplot(aes(reorder(Team, Captain), Captain, fill = Captain))+
+  geom_col(show.legend = FALSE)+
+  coord_flip()+
+  labs(x = NULL, y = NULL, title = "Number of Captains")+
+  scale_fill_gradient(low = "khaki", high = "navy")+
+  theme(
+    panel.background = element_rect(fill = "darkgray"),
+    plot.background = element_rect(fill = "darkgray", color = "darkgray"),
+    legend.background = element_rect(fill = "darkgray"),
+    legend.key = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    legend.position = "bottom",
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5, color = "darkslategray")
+  )
+
+grid.arrange(p1, p2, ncol = 2)
+```
+
+# **Discipline**
+```{r message=FALSE, warning=FALSE, fig.width=15, fig.height=10}
+df %>% 
+  select(Team, Fouls, YellowCard, RedCard, YellowRed) %>% 
+  group_by(Team) %>% 
+  summarise_at(vars(Fouls, YellowCard:YellowRed), funs(sum)) %>% 
+  arrange(Fouls) %>% 
+  mutate(Kicked = RedCard+YellowRed)
+```
+
+```{r message=FALSE, warning=FALSE, fig.width=15, fig.height=10}
+discipline <- df %>% 
+  select(Team, Fouls, YellowCard, RedCard, YellowRed) %>% 
+  group_by(Team) %>% 
+  summarise_at(vars(Fouls, YellowCard:YellowRed), funs(sum)) %>% 
+  arrange(Fouls) %>% 
+  mutate(Kicked = RedCard+YellowRed) 
+
+disp2 <- discipline %>%  
+  arrange(Kicked) %>% 
+  filter(Team %in% c("Chelsea", "Manchester United", "Burnley", "Liverpool", "Arsenal", "Southampton", "Manchester City", "Watford"))
+
+
+ggplot(discipline, aes(x = Fouls, YellowCard, color = Kicked, size = Kicked))+
+  geom_point()+
+  geom_text(disp2, mapping = aes(Fouls, YellowCard, label = Team), size = 4, vjust = -1.1)+
+  guides(size=FALSE)+
+  scale_color_gradient(high = "red", "low" = "yellow")+
+  theme_classic()+
+  theme(
+    # Background
+    plot.background = element_rect(fill = "black", color = "black"),
+    panel.background = element_rect(fill = "black"),
+    legend.background = element_rect(fill = "black"),
+    # Position
+    legend.position = "bottom",
+    legend.key.width=unit(1.5,"cm"),
+    # Text
+    axis.title = element_text(color = "cornsilk", size = 20),
+    axis.text = element_text(color = "cornsilk", size = 12),
+    legend.text = element_text(color = "cornsilk"),
+    legend.title = element_text(color = "cornsilk",vjust = 0.95, size = 15),
+    # Line
+    axis.line = element_line(color = "gray"),
+    # Title
+    plot.title = element_text(hjust = .5, color = "cornsilk", size = 20, face = "bold")
+  )+
+  ylim(10,100)+
+  labs(y = "Yellow Card", color = "Kicked", title = "Premier League Discipline Graph")
+```
+
+
+# **Who is better at scoring?**
+```{r message=FALSE, warning=FALSE, fig.width=15, fig.height=10}
+df %>% 
+  select(Team_Logo, Team, Score, Offsides) %>% 
+  group_by(Team_Logo, Team) %>% 
+  summarise_at(vars(Score, Offsides), funs(sum)) %>% 
+  arrange(Offsides) %>%  
+  ggplot(aes(Offsides, Score))+
+  geom_image(aes(image = Team_Logo), size = 0.06)+
+  coord_flip()+
+  theme_minimal()+
+  theme(
+    # Background
+    plot.background = element_rect(fill = "lightgray"),
+    panel.background = element_rect(fill = "white"),
+    # Title
+    plot.title = element_text(size = 20, face = "bold"),
+    # Text
+    axis.title = element_text(size = 15),
+    axis.text = element_text(size = 12)
+  )+
+  labs(y = "Total Goal", title = "Who is better at scoring?")
+```
+
+# **Who are successful managers?**
+```{r message=FALSE, warning=FALSE, fig.width=15, fig.height=10}
+teams <- df %>% 
+  group_by(Team) %>% 
+  summarise(L = length(unique(Manager))) %>% 
+  ungroup() %>% 
+  filter(L == 1) %>% pull(Team)
+
+df %>% filter(Team %in% teams) %>% 
+  group_by(Manager, Team) %>% 
+  summarise(Score = sum(Score), ShotsAccuracy = mean(ShotsAccuracy)) %>% 
+  ungroup() %>% 
+  ggplot(aes(Score, ShotsAccuracy, label = paste0(Manager, " (", Team, ")")))+
+  geom_rect(aes(xmin = 20, xmax = 52.53, ymin = 0.275, ymax = 0.3322), fill = "orangered")+
+  geom_rect(aes(xmin = 52.53, xmax = 110, ymin = 0.3322, ymax = 0.4), fill = "seagreen")+
+  geom_hline(aes(yintercept = 0.3322), color = "cornsilk")+
+  geom_vline(aes(xintercept = 52.53), color = "cornsilk")+
+  geom_point(aes(x = 52.53, y = 0.3322), size = 4, color = "khaki")+
+  geom_text(aes(x = 56, y = 0.335, label = "Season Average"), color = "khaki")+
+  geom_text(vjust = -0.6, color = "white", size =5)+
+  geom_jitter(alpha = 0.4, color = "white")+
+  xlim(20, 110)+ylim(0.275,0.4)+
+  labs(y = "Average Shot Accuracy", title = "Who are successful managers?")+
+  scale_y_continuous(labels = scales::percent)+
+  theme_classic()+
+  theme(
+    # Background
+    plot.background = element_rect(fill = "black", color = "black"),
+    panel.background = element_rect(fill = "black"),
+    legend.background = element_rect(fill = "black"),
+    # Position
+    legend.position = "bottom",
+    legend.key.width=unit(1.5,"cm"),
+    # Text
+    axis.title = element_text(color = "cornsilk", size = 20),
+    axis.text = element_text(color = "cornsilk", size = 12),
+    legend.text = element_text(color = "cornsilk"),
+    legend.title = element_text(color = "cornsilk",vjust = 0.95, size = 15),
+    # Line
+    axis.line = element_line(color = "gray"),
+    # Title
+    plot.title = element_text(hjust = .5, color = "cornsilk", size = 20, face = "bold")
+  )
+```
+
+
+
+
