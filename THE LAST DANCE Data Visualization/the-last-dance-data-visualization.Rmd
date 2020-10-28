@@ -1,0 +1,675 @@
+---
+title: 'The Last Dance: Data Visualization'
+subtitle: 'Michael Jordan, Kobe Bryant, LeBron James, NBA'
+author: 
+  name: "Ekrem Bayar"
+date: '`r Sys.Date()`'
+output:
+  html_document:
+    toc: yes
+    number_sections: yes
+    code_folding: hide
+    theme: spacelab
+    highlight: tango
+---
+
+
+<center>
+<p style="font-size:20pt; font-style:bold">
+“FIRST OF ALL, THERE IS NO BACKSTABBING GOING ON HERE!” 
+</p>
+</center>
+
+
+<center><img
+src="https://www.kolpaper.com/wp-content/uploads/2020/05/The-Last-Dance-Wallpaper-2.jpg" style="width:100%;height:100%;">
+</center>
+
+<br>
+
+Special thanks to @xvivancos [Xavier](https://www.kaggle.com/xvivancos) for this dataset and his amazing RMarkdown file and [notebook](https://www.kaggle.com/xvivancos/michael-jordan-vs-kobe-bryant-vs-lebron-james)! You can learn lots of things Xavier's notebook.
+
+
+# **Packages / Data / Functions** {.tabset .tabset-fade .tabset-pills}
+
+**S.Pippen:** Come back MJ!
+
+<center><img
+src="https://i.pinimg.com/originals/7f/d8/dc/7fd8dc00c637d8dc5b1b20cc98210648.gif" style="width:100%;height:100%;">
+</center>
+
+<br>
+
+## **Packages**
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(scales)
+library(png)
+library(grid)
+library(gridExtra)
+library(lubridate)
+```
+
+## **Data**
+
+```{r}
+total <- read.csv("../input/michael-jordan-kobe-bryant-and-lebron-james-stats/totals_stats.csv")
+salaries <- read.csv("../input/michael-jordan-kobe-bryant-and-lebron-james-stats/salaries.csv")
+allgames <- read.csv("../input/michael-jordan-kobe-bryant-and-lebron-james-stats/allgames_stats.csv")
+allstar <- read.csv("../input/michael-jordan-kobe-bryant-and-lebron-james-stats/allstar_games_stats.csv")
+
+# NBA Logo for plots
+img <- readPNG("../input/thelastdance/nba.png")
+img <- rasterGrob(img, interpolate=TRUE)
+```
+
+## **Functions**
+
+**Jordan Rules Function**
+
+```{r}
+jordanRules <- function(df, RSorPO = c("All", "Regular", "Playoffs")){
+  
+  if(RSorPO == "All"){
+    
+    temp <- df
+    
+  }else if(RSorPO == "Regular"){
+    
+    temp <- filter(df, RSorPO == "Regular Season")
+    
+  }else if(RSorPO == "Playoffs"){
+    
+    temp <- filter(df, RSorPO == "Playoffs")
+    
+  }else{return(NULL)}
+  
+  temp <- temp %>% 
+    group_by(Opp, Result) %>% 
+    count() %>% 
+    ungroup() %>% 
+    mutate(n = if_else(Result == "L", -n, n)) %>% 
+    arrange(-n)
+  
+  return(temp)
+}
+```
+
+
+**Coord Polar Function**
+
+```{r}
+cpolar <- function(df, position = c("stack", "fill", "dodge"), theta = c("x", "y"), legend = FALSE){
+
+  if(theta == "x"){
+
+    th <- theme(axis.text.y = element_blank(),legend.position = "bottom")
+
+  }else{
+
+    th <- theme(axis.text.x = element_blank(),legend.position = "bottom")
+
+  }
+  
+  df %>% filter(Season %in% vs, !is.na(PTS), PTS != 0) %>% 
+  ggplot(aes(Season, PTS, fill = Player))+
+  geom_col(position = position, show.legend = legend)+
+  coord_polar(theta = theta)+
+  scale_fill_manual(values = c("#fdb927", "#6f263d","#ce1141"))+
+  theme_minimal()+
+  th+
+  labs(title = paste0("Position: ", position, ", Coord Polar: ", theta))
+
+}
+
+```
+
+
+# **Jordan Rules** {.tabset .tabset-fade .tabset-pills}
+
+<br>
+
+<center><img
+src="https://oregonsportsnews.com/wp-content/uploads/2019/02/Bill-Laimbeer.jpg" style="width:100%;height:100%;">
+</center>
+
+<br>
+
+- First plot shows us, Bad Boys (Detroit Pistons) has damaged a lot MJ's career. He lost 43 matches against Detroit Pistons in his entire career, but also he won 43 matches likewise against them. Also, Utah Jazz both has lost and won 19 matches against playing him.
+
+- While MJ was playing for Washington Wizards, he won 5 matches and lost 1 match against his former team. Even Chicago Bulls couldn't stop Jordan.
+
+- New York Knicks was defeated many many times by Michael Jordan. I believe that NYK players didn't want to play against him. There are other teams that lose many times like NYK such as Atlanta Hawks, Cleveland Cavaliers, Milwaukee Bucks etc.
+
+- He has not win ever against Boston Celtics in the Playoffs at 1986 and 1987 seasons. 
+
+- Also New York Knicks was one of the best teams in 90's. NYK was the team that MJ has stood and won the most in the Playoffs. Even NYK was not defeated Chicago Bulls, Detroit Pistons was defeated them three years in a row between 1989-1990 seasons in the Championship.   
+
+## All Career
+
+
+```{r fig.width=13, fig.height=8}
+res <- jordanRules(allgames %>% filter(Player == "Michael Jordan"), RSorPO = "All")
+
+jordanRules(allgames %>% filter(Player == "Michael Jordan"), RSorPO = "All") %>% 
+  ggplot(aes(Opp, n, fill = Result, label = abs(n)))+
+  geom_col(position = position_identity())+
+  geom_text(color = "white")+
+  scale_fill_manual(values = c("#000000","#ce1141"))+
+  theme_dark()+
+  theme(
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "bottom",
+    plot.title = element_text(size = 25, color = "#17408B", hjust = 0.5,face = "bold", margin = margin(b = 5)),
+    plot.subtitle = element_text(size = 12, color = "#C9082A", hjust = 0.5, margin = margin(b = 5))
+  )+
+  labs(x = NULL, y = NULL, fill = NULL,
+       title = "The teams that MJ’s beated and defeated in his entire career",
+       subtitle = "1984-2003")
+```
+
+
+
+## Regular Season
+
+```{r fig.width=13, fig.height=8}
+jordanRules(allgames %>% filter(Player == "Michael Jordan"), RSorPO = "Regular") %>% 
+  ggplot(aes(Opp, n, fill = Result, label = abs(n)))+
+  geom_col(position = position_identity())+
+  geom_text(color = "white")+
+  scale_fill_manual(values = c("#000000","#ce1141"))+
+  theme_dark()+
+  theme(
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "bottom",
+    plot.title = element_text(size = 25, color = "#17408B", hjust = 0.5,face = "bold", margin = margin(b = 5)),
+    plot.subtitle = element_text(size = 12, color = "#C9082A", hjust = 0.5, margin = margin(b = 5))
+  )+
+  labs(x = NULL, y = NULL, fill = NULL,
+       title = "The teams that MJ’s beated and defeated in regular seasons",
+       subtitle = "1984-2003")
+```
+
+## Playoffs
+
+```{r fig.width=13, fig.height=8}
+jordanRules(allgames %>% filter(Player == "Michael Jordan"), RSorPO = "Playoffs") %>% 
+  ggplot(aes(Opp, n, fill = Result, label = abs(n)))+
+  geom_col(position = position_identity())+
+  geom_text(color = "white")+
+  scale_fill_manual(values = c("#000000","#ce1141"))+
+  theme_dark()+
+  theme(
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "bottom",
+    plot.title = element_text(size = 25, color = "#17408B", hjust = 0.5,face = "bold", margin = margin(b = 5)),
+    plot.subtitle = element_text(size = 12, color = "#C9082A", hjust = 0.5, margin = margin(b = 5))
+  )+
+  labs(x = NULL, y = NULL, fill = NULL,
+       title = "The teams that MJ’s beated and defeated in Playoffs",
+       subtitle = "1984-2003")
+```
+
+
+# **Jordan Rules Vol:2** {.tabset .tabset-fade .tabset-pills}
+
+- Next step, I would like to see the difference between the number of matches won and lost. Many teams could not resist MJ.
+
+- He has played against 33 teams in the NBA. Was he winner or loser?
+
+- There are a few teams had negative score that the difference between the frequency of a win and a loss in his entire career.
+
+- There are two teams that equals when we compare winning and losing scores: Detroit Pistons and Utah Jazz. MJ has played 124 matches in total and he won half of the matches against them.
+
+
+
+## All Career
+
+```{r fig.width=13, fig.height=8}
+wl1 <- jordanRules(allgames %>% filter(Player == "Michael Jordan"), RSorPO = "All") %>% 
+  spread(Result, n) %>% 
+  mutate(L = ifelse(is.na(L) == TRUE, 0, L),
+         W = ifelse(is.na(W) == TRUE, 0, W),
+         A = L+W, 
+         R = as.factor(if_else(A == 0, "Equal", if_else(A > 0, "Winner","Loser")))
+         ) %>% 
+  arrange(-A) 
+
+wl1 %>% 
+  ggplot(aes(Opp, A, color = R))+
+  geom_segment(aes(x=Opp, xend=Opp, y=0, yend=A))+
+  geom_point(size=4, alpha=0.7)+
+  scale_color_manual(values = c("Equal" = "#000000", "Loser"="#ce1141", "Winner"="#17408B"))+
+  coord_flip()+
+  theme_light()+
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "bottom"
+  )+
+  labs(x = NULL, y = NULL, color = NULL, title = "Win-Loss Records in his career")
+```
+
+## Regular Season
+
+```{r fig.width=13, fig.height=8}
+wl2 <- jordanRules(allgames %>% filter(Player == "Michael Jordan"), RSorPO = "Regular") %>% 
+  spread(Result, n) %>% 
+  mutate(L = ifelse(is.na(L) == TRUE, 0, L),
+         W = ifelse(is.na(W) == TRUE, 0, W),
+         A = L+W, 
+         R = as.factor(if_else(A == 0, "Equal", if_else(A > 0, "Winner","Loser")))
+         ) %>% 
+  arrange(-A) 
+
+wl2 %>% 
+  ggplot(aes(Opp, A, color = R))+
+  geom_segment(aes(x=Opp, xend=Opp, y=0, yend=A))+
+  geom_point(size=4, alpha=0.7)+
+  scale_color_manual(values = c("Equal" = "#000000", "Loser"="#ce1141", "Winner"="#17408B"))+
+  coord_flip()+
+  theme_light()+
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "bottom"
+  )+
+  labs(x = NULL, y = NULL, color = NULL, title = "Win-Loss Records in Regular Seasons")
+```
+
+## Playoffs
+
+```{r fig.width=13, fig.height=8}
+wl3 <- jordanRules(allgames %>% filter(Player == "Michael Jordan"), RSorPO = "Playoffs") %>% 
+  spread(Result, n) %>% 
+  mutate(L = ifelse(is.na(L) == TRUE, 0, L),
+         W = ifelse(is.na(W) == TRUE, 0, W),
+         A = L+W, 
+         R = as.factor(if_else(A == 0, "Equal", if_else(A > 0, "Winner","Loser")))
+         ) %>% 
+  arrange(-A) 
+
+wl3 %>% 
+  ggplot(aes(Opp, A, color = R))+
+  geom_segment(aes(x=Opp, xend=Opp, y=0, yend=A))+
+  geom_point(size=4, alpha=0.7)+
+  scale_color_manual(values = c("Equal" = "#000000", "Loser"="#ce1141", "Winner"="#17408B"))+
+  coord_flip()+
+  theme_light()+
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.y = element_blank(),
+    legend.position = "bottom"
+  )+
+  labs(x = NULL, y = NULL, color = NULL, title = "Win-Loss Records in Playoffs")
+```
+
+# **Jordan Rules Vol:3**
+
+- In this section, we are going to look at the percentage of the matches that he won and lost.
+
+- First output gives us the percentage of the matches he played. Other statistics we calculated shows us the difference between the number of matches won and lost according to his whole career, regular seasons and playoffs.
+
+- When all of the matches MJ's played investigated, MJ has won 64%! 
+
+```{r}
+# All Career L-W
+prop.table(table(allgames$Result))
+```
+
+```{r}
+# All Career
+prop.table(table(wl1$R))
+```
+
+```{r}
+# Regular Season
+prop.table(table(wl2$R))
+```
+
+
+```{r}
+# Playoffs
+prop.table(table(wl3$R))
+```
+
+
+```{r message=FALSE, warning=FALSE, fig.width=13, fig.height=8}
+wl1 %>% 
+  group_by(R) %>% 
+  count() %>% 
+  ungroup() %>% 
+  mutate(Pc = round(n / sum(n), 2)) %>% 
+  ggplot(aes(R, Pc, fill = R, label = paste0(Pc*100, "%")))+
+  geom_col(show.legend = FALSE)+
+  geom_label(color = "white", show.legend = FALSE)+
+  coord_flip()+
+  coord_polar(theta = "y")+
+  scale_fill_manual(values = c("#000000","#ce1141", "#17408B"))+
+  theme_minimal()+
+  theme(
+    axis.text.x = element_blank()
+  )+
+  labs(x = NULL, y = NULL)
+  
+```
+
+
+# **Michael Jordan, Kobe Bryant and LeBron James**
+
+<center><img
+src="https://images.fineartamerica.com/images/artworkimages/mediumlarge/3/lebron-james-kobe-bryant-and-michael-jordan-mark-spears.jpg">
+</center>
+
+<br>
+
+- This part includes the comparasion of Michael Jordan, Kobe Bryant and LeBron James with some visuals.
+
+
+- This line graph give us their salary changing of the all seasons. 
+
+```{r message=FALSE, warning=FALSE, fig.width=13, fig.height=8}
+salaries$Salary <- str_sub(salaries$Salary, 2, str_length(salaries$Salary))
+salaries$Salary <- as.numeric(salaries$Salary)
+
+max_salary <- salaries %>% 
+  group_by(Player) %>% 
+  summarise(Salary = max(Salary)) %>% 
+  left_join(salaries %>% select(Player, Salary, Season), by = c("Player", "Salary"))
+
+ggplot()+
+  geom_line(salaries, mapping = aes(Season, Salary, color = Player, group = Player), size = 1.2)+
+  geom_point(max_salary, mapping = aes(Season, Salary, color = Player), size = 3)+
+  geom_text(max_salary, mapping = aes(Season, Salary, label = Season), hjust=1.2, vjust=-0.1, color = "darkslategray")+
+  geom_vline(xintercept = 13, linetype = 2, size = 0.4)+
+  geom_text(aes(x = 12.5, y = 15000000), label = "The Last Dance", angle = 90, size = 5)+
+  scale_color_manual(values = c("#fdb927", "#6f263d","#ce1141"))+
+  scale_y_continuous(labels = dollar_format())+
+  theme_minimal()+
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(size = 30, hjust = 0.5,face = "bold", margin = margin(b = 5)),
+    axis.title = element_text(size = 20),
+    axis.text.y = element_text(margin = margin(l = 7)),
+    axis.text.x = element_text(margin = margin(b = 7), angle = 90)
+  )+
+  labs(color = NULL, y = "Salary", title = "RISES OF THE KINGS")+
+  annotation_custom(img, xmin=1, xmax=63, ymin=9000000, ymax=500000)
+```
+
+## NBA Allstar
+
+- How about their NBA allstar rivalry? 
+
+- This graph shows us their point statistics and minutes played per game.
+                                    
+```{r fig.width=13, fig.height=8}
+vs <- allstar %>% 
+  group_by(Season) %>% 
+  count(sort = T) %>% 
+  ungroup() %>% 
+  filter(n > 1) %>% 
+  pull(Season)
+
+
+allstar %>% filter(Season %in% vs, !is.na(PTS), PTS != 0) %>% 
+  ggplot(aes(Season, PTS, fill = Player))+
+  geom_col(position = "fill")+
+  geom_text(aes(label = paste("PTS:",PTS, " ", "MP:", MP)), 
+            position = position_fill(0.5), color = "white", size = 3)+
+  scale_fill_manual(values = c("#fdb927", "#6f263d","#ce1141"))+
+  coord_flip()+
+  theme_minimal()+
+  theme(
+    plot.title = element_text(size = 30, color = "#17408B", hjust = 0.5,face = "bold", margin = margin(b = 5)),
+    plot.subtitle = element_text(size = 12, color = "#C9082A", hjust = 0.5, margin = margin(b = 5)),
+    legend.position = "top",
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(color = "#17408B")
+  )+
+  labs(x = NULL, y = NULL, title = "NBA Allstar", subtitle = "Points & Minutes Played Per Game")
+```
+
+## Points
+
+```{r message=FALSE, warning=FALSE, fig.width=13, fig.height=8}
+allpoints <- total %>% 
+  select(Player, Season,RSorPO, PTS, X2P, X3P) %>% 
+  gather(P, Points, -Player, -Season,-RSorPO) %>% 
+  mutate(P = str_remove_all(P, "X"))
+
+rbind(allpoints, 
+      allpoints %>% mutate(RSorPO = "All Career") %>% group_by(Player, Season, P,RSorPO) %>% 
+        summarise(Points = sum(Points)) %>% ungroup()) %>% 
+  ggplot(aes(Season, Points, color = Player, group = Player))+
+  geom_line()+
+  scale_color_manual(values = c("#fdb927", "#6f263d","#ce1141"))+
+  facet_grid(P~RSorPO, scales = "free")+
+  theme_minimal()+
+  theme(
+    axis.text.x = element_text(angle = 90, size = 7),
+    strip.background = element_rect(fill = "gray"),
+    strip.text = element_text(color = "#17408B", size = 20, face = "bold"),
+    legend.text = element_text(size = 15),
+    legend.title = element_text(size = 20),
+    legend.position = c(0.1,0.9),
+    legend.box.background = element_rect()
+  )
+```
+
+## All Seasons 2P & 3P
+
+
+                                        
+```{r fig.width=13, fig.height=8}
+total %>% 
+  select(Season, Player, X3P, X2P) %>% 
+  gather(Points, Value,-Season,-Player) %>% 
+  mutate(Points = str_remove_all(Points,"X")) %>% 
+  ggplot(aes(Season, Value,fill = Points, label = Value))+
+  geom_col(position = "fill")+
+  coord_flip()+
+  facet_grid(Player~., scales = "free")+
+  scale_fill_manual(values = c("#C9082A","#17408B"))+
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.title = element_blank(),
+    legend.position = "top",
+    strip.text = element_text(color = "#17408B", size = 20, face = "bold")
+  )
+```
+
+
+
+## Average Features
+                                        
+```{r fig.width=13, fig.height=8}
+total %>% 
+  select_if(is.numeric) %>% 
+  mutate(Player = total$Player) %>% 
+  select(-Age, -contains("PA"),-contains("P."),-FG.,-eFG.,-FT.) %>% 
+  group_by(Player) %>% 
+  summarise_all("mean") %>% 
+  ungroup() %>% 
+  gather(Key, Value,-Player) %>% 
+  mutate(Key = str_remove_all(Key, "X")) %>% 
+  ggplot(aes(Key, Value, fill = Player, label = as.integer(Value)))+
+  scale_fill_manual(values = c("#fdb927", "#6f263d","#ce1141"))+
+  geom_col(position = "fill")+
+  geom_text(position = position_fill(0.5), color = "white", size = 4)+
+  coord_flip()+
+  theme_minimal()+
+  theme(
+    legend.position = "bottom",
+    axis.title = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank()
+  )+
+  labs(fill = NULL)
+```
+
+## Outlier Matches & Points
+                                        
+                                        
+```{r message=FALSE, warning=FALSE, fig.width=13, fig.height=8}
+o <- boxplot(allgames$PTS, plot = FALSE)$out
+
+o <- which(allgames$PTS %in% o[o > 4])
+
+allgames$Date <- ymd(as.character(allgames$Date))
+
+outliers <- allgames[o,]
+
+
+ggplot()+
+  geom_area(allgames, mapping = aes(Date, PTS, fill = Player),alpha = 0.6)+
+  geom_point(outliers, mapping = aes(Date, PTS, color = Player), size = 3, alpha = 0.6)+
+  scale_color_manual(values = c("#fdb927", "#6f263d","#ce1141"))+
+  scale_fill_manual(values = c("#fdb927", "#6f263d","#ce1141"))+
+  theme_minimal()
+```
+
+
+## Radar
+                                        
+                                      
+```{r fig.width=15, fig.height=12}
+total %>% 
+  select(Season, Player, PF, TOV, BLK, STL, AST, TRB,FTA) %>% 
+  gather(Key, Value,-Season,-Player) %>% 
+  ggplot(aes(Key, Value, fill = Player))+
+  geom_col(position = "dodge")+
+  coord_polar()+
+  scale_fill_manual(values = c("#fdb927", "#6f263d","#ce1141"))+
+  facet_wrap(Season~.)+
+  theme(
+    strip.text = element_text(size = 15, face = "bold"),
+    legend.position = c(0.9, 0.08)
+  )+
+  labs(x = NULL, y = NULL, fill = NULL)
+```
+
+
+
+
+## Bonus: Coord Polar
+
+
+```{r fig.height=8, fig.width=13}
+# p1
+grid.arrange(
+    
+    cpolar(allstar, position = "stack", theta = "x"),
+    cpolar(allstar, position = "fill", theta = "x"),
+    cpolar(allstar, position = "dodge", theta = "x", legend = TRUE),
+    cpolar(allstar, position = "fill", theta = "y", legend = TRUE),
+    ncol = 2
+)
+
+```
+
+
+<br>
+
+# **My Other Notebooks about Sports Analytics**
+
+<div class="row">
+
+<div class="col-sm-3">
+<div class="card">
+<div class="card-body" style="width: 18rem;">
+<h7 class="card-title">FIFA 19 Dashboard with R Shiny</h7>
+</div>
+</div>
+</div>
+
+<div class="col-sm-3">
+<div class="card">
+<div class="card-body" style="width: 18rem;">
+<h7 class="card-title">FIFA Data Analysis & Visualization</h7>
+</div>
+</div>
+</div>
+
+<div class="col-sm-3">
+<div class="card">
+<div class="card-body" style="width: 18rem;">
+<h7 class="card-title">FIFA World Cup: Event Data Shot, Pass, Avg.Pos</h7>
+</div>
+</div>
+</div>
+
+<div class="col-sm-3">
+<div class="card">
+<div class="card-body" style="width: 18rem;">
+<h7 class="card-title">Premier League 19-20 Data Analysis & Visualization</h7>
+</div>
+</div>
+</div>
+
+</div>
+
+
+<div class="row">
+
+<div class="col-sm-3">
+<div class="card">
+<div class="card-body" style="width: 18rem;">
+<img src="https://community.rstudio.com/uploads/default/original/3X/f/f/ff96a5b7fc694775f34d41d1c89e104cb8af80c9.jpeg" class="card-img-top" alt="...">
+<hr>
+<a href="https://www.kaggle.com/ekrembayar/fifa-19-dashboard-with-r-shiny" class="btn btn-primary" style="color:white;">Go to Notebook</a>
+</div>
+</div>
+</div>
+
+<div class="col-sm-3">
+<div class="card">
+<div class="card-body" style="width: 18rem;">
+<img src="https://www.myplaystationwallpapers.net/1920x1080/fifa-19-keyart-02.jpg" class="card-img-top" alt="...">
+<hr>
+<a href="https://www.kaggle.com/ekrembayar/fifa-data-analysis-visualization" class="btn btn-primary" style="color:white;">Go to Notebook</a>
+</div>
+</div>
+</div>
+
+<div class="col-sm-3">
+<div class="card">
+<div class="card-body" style="width: 18rem;">
+<img src="https://s01.sgp1.digitaloceanspaces.com/large/898485-zygxomeltv-1531717418.jpg" class="card-img-top" alt="...">
+<hr>
+<a href="https://www.kaggle.com/ekrembayar/fifa-world-cup-event-data-shot-pass-avg-pos" class="btn btn-primary" style="color:white;">Go to Notebook</a>
+</div>
+</div>
+</div>
+
+<div class="col-sm-3">
+<div class="card">
+<div class="card-body" style="width: 18rem;">
+<img src="data:image/png;base64,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" class="card-img-top" alt="...">
+<hr>
+<a href="https://www.kaggle.com/ekrembayar/premier-league-19-20-data-analysis-visualization" class="btn btn-primary" style="color:white;">Go to Notebook</a>
+</div>
+</div>
+</div>
+
+</div>
+
+
+<br>
+
+<center><img
+src="https://i.pinimg.com/originals/8e/ee/76/8eee760dd6f5f31e3e38c0542fedb609.gif" style="width:100%;height:100%;"> 
+</center>
+
+<hr>
+
+
+
