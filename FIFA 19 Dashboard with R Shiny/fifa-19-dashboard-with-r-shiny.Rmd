@@ -1,0 +1,205 @@
+---
+title: "FIFA 19 Dashboard with R Shiny App"
+author: "Ekrem BAYAR"
+date: '`r Sys.Date()`'
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+<br>
+
+I first designed the dashboard to compare teams and player stats inside the Bundesliga, Eredivisie, La Liga, Liga Nos, Ligue 1, Premier League, Serie A and Süper Lig. Newest additions and improvements made it possible for better visuals, new leagues, in depth ad-hoc analysis and EDAs to enhance the data science experience in sports analytics.
+
+
+**Note: Unfortunetly, this app is not endorsed by Kaggle! Therefore, I shared some pictures below from the app. You can see the pictures or try the app.** 
+
+<hr>
+
+You can run the app <font size = '3'> **[here](https://ekrem-bayar.shinyapps.io/FifaDash/)**</font> and click **'Become A Legend'** button. 
+
+### *If you like the dashboard, don't forget upvote! :)*
+
+
+### **My Other Notebooks about Sports Analytics**
+
+<div class="row">
+
+<div class="col-sm-3">
+<div class="card">
+<div class="card-body" style="width: 18rem;">
+<h7 class="card-title">The Last Dance: Data Visualization</h7>
+</div>
+</div>
+</div>
+
+<div class="col-sm-3">
+<div class="card">
+<div class="card-body" style="width: 18rem;">
+<h7 class="card-title">FIFA Data Analysis & Visualization</h7>
+</div>
+</div>
+</div>
+
+<div class="col-sm-3">
+<div class="card">
+<div class="card-body" style="width: 18rem;">
+<h7 class="card-title">FIFA World Cup: Event Data Shot, Pass, Avg.Pos</h7>
+</div>
+</div>
+</div>
+
+<div class="col-sm-3">
+<div class="card">
+<div class="card-body" style="width: 18rem;">
+<h7 class="card-title">Premier League 19-20 Data Analysis & Visualization</h7>
+</div>
+</div>
+</div>
+
+</div>
+
+
+<div class="row">
+
+<div class="col-sm-3">
+<div class="card">
+<div class="card-body" style="width: 18rem;">
+<img src="https://www.kolpaper.com/wp-content/uploads/2020/05/The-Last-Dance-Wallpaper-2.jpg" class="card-img-top" alt="...">
+<hr>
+<a href="https://www.kaggle.com/ekrembayar/the-last-dance-data-visualization" class="btn btn-primary" style="color:white;">Go to Notebook</a>
+</div>
+</div>
+</div>
+
+<div class="col-sm-3">
+<div class="card">
+<div class="card-body" style="width: 18rem;">
+<img src="https://www.myplaystationwallpapers.net/1920x1080/fifa-19-keyart-02.jpg" class="card-img-top" alt="...">
+<hr>
+<a href="https://www.kaggle.com/ekrembayar/fifa-data-analysis-visualization" class="btn btn-primary" style="color:white;">Go to Notebook</a>
+</div>
+</div>
+</div>
+
+<div class="col-sm-3">
+<div class="card">
+<div class="card-body" style="width: 18rem;">
+<img src="https://s01.sgp1.digitaloceanspaces.com/large/898485-zygxomeltv-1531717418.jpg" class="card-img-top" alt="...">
+<hr>
+<a href="https://www.kaggle.com/ekrembayar/fifa-world-cup-event-data-shot-pass-avg-pos" class="btn btn-primary" style="color:white;">Go to Notebook</a>
+</div>
+</div>
+</div>
+
+<div class="col-sm-3">
+<div class="card">
+<div class="card-body" style="width: 18rem;">
+<img src="data:image/png;base64,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" class="card-img-top" alt="...">
+<hr>
+<a href="https://www.kaggle.com/ekrembayar/premier-league-19-20-data-analysis-visualization" class="btn btn-primary" style="color:white;">Go to Notebook</a>
+</div>
+</div>
+</div>
+
+</div>
+
+
+<br>
+
+
+<br>
+
+
+## Dashboard Pages {.tabset .tabset-fade .tabset-pills}
+
+<hr>
+
+### Home
+
+![](https://community.rstudio.com/uploads/default/original/3X/f/f/ff96a5b7fc694775f34d41d1c89e104cb8af80c9.jpeg)
+
+### Leagues
+
+![](https://community.rstudio.com/uploads/default/original/3X/5/a/5a4039f12cc70162525ca3002215f9697c5d03ed.png)
+
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1056223%2F1ca01afcb5e0f291f94e00f721ec6aa9%2Fl1.PNG?generation=1593900448968714&alt=media)
+
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1056223%2F0be905ba2a142351f41a7236f47464a5%2Fl2.PNG?generation=1593900477730290&alt=media)
+
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1056223%2F5ad6ac71859c6f1b6a19fe88c8626a6f%2Fl3.PNG?generation=1593900501573658&alt=media)
+
+<hr> 
+
+### Teams
+
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1056223%2Fe47d08588493409ed1ed899feaec6526%2Ft1.png?generation=1593901043999079&alt=media)
+
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1056223%2F0b3d5d0041082d788f0d4d0d19fecda5%2Ft2.png?generation=1593901090710785&alt=media)
+
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1056223%2F04ff617b34d2c78f632102b72a5061ea%2Ft3.PNG?generation=1593901085342839&alt=media)
+
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1056223%2Fe124feedd9555c84f085f0413672a07e%2Ft4.PNG?generation=1593901089352774&alt=media)
+
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1056223%2F179a994e84db84e698e6e620c9ec58a4%2Ft5.PNG?generation=1593901088533482&alt=media)
+
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1056223%2Fed50151e99cfb18b138d5c8cf6cb2302%2Ft6.PNG?generation=1593901088054598&alt=media)
+
+<hr> 
+
+### Players
+
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1056223%2Fe075964f47a54d550d89dfc5fe05d984%2F4.JPG?generation=1577910624592720&alt=media)
+
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1056223%2F6e52ab962bf86d24c1b4e34f2462bc5f%2Fp1.png?generation=1593901463971447&alt=media)
+
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1056223%2Fc8b7e6b834c67b03371fbc8d2c749de4%2Fp2.PNG?generation=1593901464609978&alt=media)
+
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1056223%2F76906c28f4dfe0e17f523aa04a8b4ded%2Fp3.PNG?generation=1593901464817349&alt=media)
+
+<hr> 
+
+### Scout
+
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1056223%2Fb77f2d87a3de469d95f6bdf61aee7d3a%2Fsc1.PNG?generation=1593899384783166&alt=media)
+
+![](https://community.rstudio.com/uploads/default/optimized/3X/5/1/5148538d7e7aaadac8eee157eb402b536138e9e8_2_997x748.png)
+
+![](https://community.rstudio.com/uploads/default/optimized/3X/7/8/7815cbdb9725196874f7c5fe94fb3d17a61ce711_2_1002x750.png)
+
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1056223%2F6fb668505c56eb4ea5f0aa699e0b442a%2Fsc2.png?generation=1593899725694089&alt=media)
+
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1056223%2F37bccca4a2f78145b0dda90583da60ba%2Fsc3.png?generation=1593900019930540&alt=media)
+
+![](https://community.rstudio.com/uploads/default/optimized/3X/f/c/fc1bb92b8926c68a1f2c5523f8069ff608201482_2_873x750.png)
+
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1056223%2F0b1611d0915f699de0c43e1282f23ba2%2F7.JPG?generation=1577910651388734&alt=media)
+
+![](https://community.rstudio.com/uploads/default/optimized/3X/7/3/737dbe6d35f1dd4243a055378516e143af518bd2_2_1035x582.png)
+
+<hr> 
+
+### Developer
+
+![](https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1056223%2Fe6f87a8880ed8db72cd3bd427873adc2%2Fdev.PNG?generation=1593899138503177&alt=media)
+
+<hr> 
+
+### Videos
+
+<center><img
+src="https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1056223%2Fac39ea95248231f3b1df4a96f91ad733%2F6.JPG?generation=1577910664020269&alt=media
+" style="width:100%;height:100%;">
+</center>
+
+<hr> 
+
+#
+
+<center><img
+src="https://www.myplaystationwallpapers.net/1920x1080/fifa-19-keyart-02.jpg" style="width:100%;height:100%;">
+</center>
+
+
