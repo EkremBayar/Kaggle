@@ -1,0 +1,531 @@
+---
+title: "Marvel Universe Data Analysis & Visualization"
+subtitle: '#Avengers, #CivilWar, #MCU'
+author: 
+  name: "Ekrem Bayar"
+date: '`r Sys.Date()`'
+output:
+  html_document:
+    toc: yes
+    number_sections: yes
+    code_folding: hide
+    theme: spacelab
+    highlight: tango
+---
+
+<br>
+
+<center><img
+src="https://i.pinimg.com/originals/10/0e/43/100e4369e5567950bf289aa844049600.gif" style="width:100%;height:100%;">
+</center>
+
+<br>
+
+# **Packages / Data** {.tabset .tabset-fade .tabset-pills}
+
+<hr>
+
+## Packages
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(magrittr)
+library(png)
+library(grid)
+library(magick)
+```
+
+## Data
+```{r message=FALSE, warning=FALSE}
+# Marvel Logo
+img <- readPNG("../input/marvellogo/marvel.png")
+img <- rasterGrob(img, interpolate=TRUE)
+# Angle = 90
+img2 <- magick::image_read("../input/marvellogo/marvel.png")
+img2 <- rasterGrob(magick::image_rotate(img2, 90))
+
+# Wiki
+wiki <- read.csv("../input/fivethirtyeight-comic-characters-dataset/marvel-wikia-data.csv", stringsAsFactors = FALSE)
+# Characters
+marvel <- read.csv("../input/marvel-superheroes/marvel_characters_info.csv") %>% 
+  filter(Publisher == "Marvel Comics")
+# Stats
+stats <- read.csv("../input/marvel-superheroes/charcters_stats.csv") %>% 
+  filter(Name %in% marvel$Name)
+# Powers
+power <- read.csv("../input/marvel-superheroes/superheroes_power_matrix.csv") %>% 
+  filter(Name %in% marvel$Name)
+```
+
+### **Data Frames** {.tabset .tabset-fade .tabset-pills}
+
+#### Wiki
+```{r message=FALSE, warning=FALSE}
+as_tibble(wiki)
+```
+
+#### Characters
+```{r message=FALSE, warning=FALSE}
+as_tibble(marvel)
+```
+
+#### Stats
+```{r message=FALSE, warning=FALSE}
+as_tibble(stats)
+```
+
+#### Powers
+```{r message=FALSE, warning=FALSE}
+as_tibble(power)
+```
+
+# **Marvel Universe Analysis**
+
+<hr>
+
+<center><img
+src="https://media1.giphy.com/media/j2pWZpr5RlpCodOB0d/giphy.gif" style="width:100%;height:100%;">
+</center>
+
+## First Apperances
+
+```{r message=FALSE, warning=FALSE}
+wiki %>% 
+  group_by(Year) %>% 
+  count() %>% 
+  ungroup() %>% 
+  ggplot(aes(Year, n))+
+  geom_area(fill = "royalblue", alpha = 0.8)+
+  geom_smooth(se = FALSE, linetype = 2, color = "red")+
+  theme(
+    panel.background = element_rect(fill = "black"),
+    plot.background = element_rect(fill = "black", color = "black"),
+    panel.grid = element_line(size = 0.1),
+    axis.text = element_text(color = "gray", size = 12),
+    axis.title = element_text(color = "gray", size = 15),
+    axis.title.y = element_text(vjust = 1.5)
+  )+
+  labs(y = "Number of First Apperance")+
+  # Marvel Logo
+  annotation_custom(img, ymin = 450, ymax = 550,  xmin = 1941, xmax = 1959)
+```
+
+
+## Demographic
+```{r message=FALSE, warning=FALSE}
+p1 <- wiki %>% 
+  filter(ALIGN != "") %>% 
+  mutate(ID = str_remove_all(ID, " Identity"),
+         ID = if_else(ID %in% "", "Null", ID),
+         SEX = if_else(SEX %in% "", "Null", SEX),
+         SEX = str_remove_all(SEX, " Characters"),
+         ALIGN = str_remove_all(ALIGN, " Characters"),
+         SEX = if_else(SEX == "Genderfluid", "Agender", SEX),
+         SEX = factor(SEX, levels = c("Male", "Female", "Null", "Agender"), ordered = TRUE))
+
+ggplot(p1, aes(factor(SEX), fill = ALIGN))+
+  # Geoms
+  geom_bar(position = position_dodge(width = 1))+
+  geom_text(aes(y = -50, label = ALIGN),position = position_dodge(width = 1), color = "white", size = 3)+
+  geom_text(aes( y=..count../tapply(..count.., ..x.. ,sum)[..x..], 
+                 label=scales::percent(..count../tapply(..count.., ..x.. ,sum)[..x..],accuracy = 1) ),
+            stat="count", position=position_dodge(1), vjust=-0.5, color = "white", size = 3)+
+  geom_text(stat='count', aes(label=scales::comma(..count..,accuracy = 1)), 
+            position=position_dodge(width = 1), vjust=-1.5, color = "white")+
+  geom_text(p1, mapping = aes(group = SEX, label = scales::percent((..count..)/sum(..count..),accuracy = 1)), stat = "count",
+            position = position_stack(vjust = 0), vjust = -30, color = "red")+
+  geom_vline(aes(xintercept = 1.5), color = "gray", linetype = 3, size = 0.5)+
+  geom_vline(aes(xintercept = 2.5), color = "gray", linetype = 3, size = 0.5)+
+  geom_vline(aes(xintercept = 3.5), color = "gray", linetype = 3, size = 0.5)+
+  # Move Axis Text to Top 
+  scale_x_discrete(position = "top")+
+  # Fill Bars
+  scale_fill_manual(values = c("#C21E48", "#2C75CB", "white"))+
+  # Theme
+  theme(
+    # Panel, Plot, Legend Background
+    panel.background = element_rect(fill = "black"),
+    plot.background = element_rect(fill = "black", color = "black"),
+    legend.background = element_rect(fill = "black"),
+    # Legend Key Background Delete
+    legend.key = element_blank(),
+    # Panel Grids
+    panel.grid = element_line(size = 0.1),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.x = element_blank(),
+    # Text Color
+    legend.text = element_text(color = "gray"),
+    axis.text = element_text(color = "gray", size = 12),
+    axis.title = element_text(color = "gray", size = 15),
+    # Legend Margin Position Adjustment
+    legend.position = "top"
+    #legend.position = unit(c(15,9), units = "cm"),
+    #plot.margin = unit(c(1,3,1,1),units = "cm")
+  )+
+  # Labels
+  labs(x = NULL, y = NULL)+
+  # Limits 
+  ylim(-50,6000)+
+  # Marvel Logo
+  annotation_custom(img, ymin = 4500, ymax = 5500,  xmin = 3.65, xmax = 4.5)
+```
+
+
+```{r message=FALSE, warning=FALSE}
+ggplot(p1 %>% filter(ID != "Known to Authorities"), aes(ALIGN, fill = ID))+
+  geom_bar(position = position_dodge(width = 1), show.legend = FALSE)+
+  geom_text(aes(y = -200, label = ID ,group = ID),position = position_dodge(width = 1), color = "white", size = 3)+
+  geom_vline(aes(xintercept = 1.5), color = "gray", linetype = 3, size = 0.5)+
+  geom_vline(aes(xintercept = 2.5), color = "gray", linetype = 3, size = 0.5)+
+  coord_flip()+
+  # Fill
+  scale_fill_manual(values = c("khaki", "white", "#2C75CB", "#C21E48"))+
+  # Move Axis Text to Top 
+  scale_x_discrete(position = "top")+
+  # Theme
+  theme(
+    # Panel, Plot, Legend Background
+    panel.background = element_rect(fill = "black"),
+    plot.background = element_rect(fill = "black", color = "black"),
+    legend.background = element_rect(fill = "black"),
+    # Legend Key Background Delete
+    legend.key = element_blank(),
+    # Panel Grids
+    panel.grid = element_line(size = 0.1),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    # Text Color
+    legend.text = element_text(color = "white"),
+    axis.text.x = element_text(color = "white", size = 12),
+    axis.text.y = element_text(color = c("red", "blue","white"), size = 12),
+    axis.title = element_text(color = "white", size = 15, hjust = 1),
+    plot.title = element_text(color = "seagreen", face = "bold", size = 15, hjust = 1)
+  )+
+  labs(y = NULL, x = NULL, title = "Identity / Alignment")+ 
+  # Marvel Logo
+  annotation_custom(img, ymin = 2520, ymax = 2980,  xmin = 3, xmax = 3.5)
+
+```
+
+## Most Common Characters
+```{r message=FALSE, warning=FALSE}
+ggplot(p1, aes(ALIGN, APPEARANCES, label = name))+
+  geom_jitter(alpha = 0.2)+
+  geom_text(aes(alpha = APPEARANCES, color = ALIGN), show.legend = FALSE, 
+            position = position_jitter(), hjust = 0.5, vjust = 0.5)+
+  theme(
+    # Panel, Plot, Legend Background
+    panel.background = element_rect(fill = "black"),
+    plot.background = element_rect(fill = "black", color = "black"),
+    legend.background = element_rect(fill = "black"),
+    panel.grid = element_blank(),
+    # Axis 
+    axis.text.x = element_text(color = "white"),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank(),
+    # Title
+    plot.title = element_text(color = "seagreen", hjust = 0.5, face = "bold", size = 20)
+  )+
+  # Color
+  scale_color_manual(values = c("#C21E48", "#2C75CB", "white"))+
+  labs(title = "Most Common Characters")+ 
+  # Marvel Logo
+  annotation_custom(img, ymin = 3800, ymax = 4200,  xmin = 0, xmax = 1.5)
+```
+
+## Average Powers
+
+
+```{r message=FALSE, warning=FALSE}
+stats %>% 
+  select(-Name, -Total) %>% 
+  filter(Alignment != "") %>% 
+  gather(Key, Value, -Alignment) %>% 
+  group_by(Alignment, Key) %>% 
+  summarise(mean = mean(Value)) %>% 
+  ungroup() %>% 
+  ggplot(aes(Key, mean, fill = Alignment))+
+  geom_col(position = "dodge")+
+  coord_polar()+
+  theme(
+    # Panel, Plot, Legend Background
+    panel.background = element_rect(fill = "black"),
+    plot.background = element_rect(fill = "black", color = "black"),
+    legend.background = element_rect(fill = "black"),
+    # Grid
+    panel.grid = element_line(color = "gray", size = 0.1),
+    # Legend Key Background Delete
+    legend.key = element_blank(),
+    legend.position = "bottom",
+    # Text
+    legend.text = element_text(color = "white"),
+    axis.text = element_text(color = "white"),
+    axis.text.x = element_text(color = "cornsilk",face = "bold", size = 10),
+    # Title
+    plot.title = element_text(hjust = 0.5, color = "cornsilk", size = 20)
+  )+
+  scale_fill_manual(values = c("#C21E48", "#2C75CB", "white"), label = c("Bad", "Good", "Neutral"))+
+  labs(title = "Average Powers")
+```
+
+## Abilities & Powers
+
+```{r message=FALSE, warning=FALSE}
+stats[-226,] %>% 
+  filter(Alignment != "") %>% 
+  gather(Key, Value, -Alignment, -Name) %>% 
+  filter(Key != "Total") %>% 
+  mutate(Alignment = str_to_title(Alignment)) %>% 
+  group_by(Key) %>% 
+  arrange(-Value) %>% 
+  #do(head(., n = 25)) %>% 
+  ungroup() %>% 
+  ggplot(aes(Key,Value, color = Key)) +
+  geom_jitter(show.legend = FALSE)+
+  coord_flip()+
+  scale_color_manual(values = c("tomato", "khaki", "cornsilk", "steelblue", "seagreen", "orchid"))+
+  facet_wrap(Alignment~.)+
+  # Theme
+  theme(
+    # Panel, Plot, Legend Background
+    panel.background = element_rect(fill = "black"),
+    plot.background = element_rect(fill = "black", color = "black"),
+    legend.background = element_rect(fill = "black"),
+    # Legend Key Background Delete
+    legend.key = element_blank(),
+    # Panel Grids
+    panel.grid = element_line(size = 0.1),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    # Text Color
+    legend.text = element_text(color = "white"),
+    axis.text.x = element_text(color = "white", size = 12),
+    axis.text.y = element_text(color = c("tomato", "khaki", "cornsilk", "steelblue", "seagreen", "orchid"), size = 12),
+    axis.title = element_text(color = "white", size = 15, hjust = 1),
+    plot.title = element_text(color = "seagreen", face = "bold", size = 15, hjust = 1),
+    strip.text = element_text(color = "white", face = "bold"),
+    # Strip
+    strip.background = element_rect(fill = "darkslategrey")
+  )+
+  labs(x = "Abilities",y = "Power")
+```
+
+```{r message=FALSE, warning=FALSE}
+stats %>% 
+  select(-Name, -Total) %>% 
+  filter(Alignment != "") %>% 
+  gather(Key, Value, -Alignment) %>%
+  mutate(Alignment = str_to_title(Alignment)) %>% 
+  ggplot(aes(Key, Value, fill = Alignment))+
+  geom_boxplot(outlier.color = "lightgray",outlier.size = 2, color = "lightgray")+
+  facet_wrap(Alignment~.,
+             strip.position = "bottom")+
+  coord_flip()+
+  labs(x = NULL, y = NULL)+
+  scale_fill_manual(values = c("#C21E48", "#2C75CB", "white"), label = c("Bad", "Good", "Neutral"))+
+  theme(
+    # Panel, Plot, Legend Background
+    panel.background = element_rect(fill = "black"),
+    plot.background = element_rect(fill = "black", color = "black"),
+    legend.background = element_rect(fill = "black"),
+    # Grid
+    panel.grid = element_line(color = "gray", size = 0.1),
+    # Legend Key Background Delete
+    legend.key = element_blank(),
+    legend.position = "bottom",
+    # Text
+    legend.text = element_text(color = "white"),
+    axis.text = element_text(color = "white"),
+    axis.text.x = element_text(color = "cornsilk",face = "bold", size = 10),
+    # Strip
+    strip.background = element_rect(fill = c("cornsilk"))
+  )+
+  ylim(-10,130)+
+  annotation_custom(img2, xmin = 0.5, xmax = 1.5, ymin = 120, ymax = 130)
+  
+```
+
+
+# **Civil War Analysis: Team Cap vs Team Iron Man**
+
+<hr>
+
+<center><img
+src="https://i.pinimg.com/originals/5d/02/9a/5d029aa478d79c8e7bcc99d020bad47b.jpg" style="width:100%;height:100%;">
+</center>
+
+
+## Total power of the team by characters
+```{r message=FALSE, warning=FALSE}
+stats %>% 
+  mutate(Team = case_when(
+    Name %in% c("Black Panther", "Iron Man", "Black Widow", "Vision", "Spider-Man", "War Machine") ~ "Team Iron Man",
+    Name %in% c("Winter Soldier", "Captain America", "Scarlet Witch", "Hawkeye", "Ant-Man", "Falcon") ~ "Team Cap",
+  )) %>% 
+  filter(!is.na(Team)) %>% 
+  select(-Alignment) %>% 
+  gather(Key, Value, -Name, -Team) %>% 
+  filter(Key == "Total") %>% 
+  ggplot(aes(reorder(Name, Value), Value, fill = Team))+
+  geom_col(show.legend = FALSE)+
+  coord_flip()+
+  facet_wrap(Team~., scales = "free")+
+  scale_fill_manual(values = c("#1849CA", "#AA0505"))+
+  theme(
+    # Panel, Plot, Legend Background
+    panel.background = element_rect(fill = "black"),
+    plot.background = element_rect(fill = "black", color = "black"),
+    legend.background = element_rect(fill = "black"),
+    # Panel Grids
+    panel.grid = element_line(size = 0.1),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    # Text
+    axis.text = element_text(color = "white"),
+    axis.text.x = element_text(color = "white",face = "bold", size = 10),
+    strip.text = element_text(color = "darkslategrey", face = "bold"),
+    # Strip
+    strip.background = element_rect(fill = "white")
+  )
+  
+```
+
+## Comparison of characters
+```{r message=FALSE, warning=FALSE}
+stats %>% 
+  mutate(Team = case_when(
+    Name %in% c("Black Panther", "Iron Man", "Black Widow", "Vision", "Spider-Man", "War Machine") ~ "Team Iron Man",
+    Name %in% c("Winter Soldier", "Captain America", "Scarlet Witch", "Hawkeye", "Ant-Man", "Falcon") ~ "Team Cap",
+  )) %>% 
+  filter(!is.na(Team)) %>% 
+  select(-Alignment) %>% 
+  left_join(data.frame(
+    Name = c(c("Black Panther", "Iron Man", "Black Widow", "Vision", "Spider-Man", "War Machine"),
+             c("Winter Soldier", "Captain America", "Scarlet Witch", "Hawkeye", "Ant-Man", "Falcon")),
+    VS = rep(c("Winter Soldier vs Black Panther", "Iron Man vs Captain America", "Black Widow vs Scarlet Witch",
+           "Vision vs Hawkeye", "Spider-Man vs Ant-Man", "War Machine vs Falcon"),2)
+  )) %>% 
+  gather(Key, Value, -Name, -Team, -VS) %>% 
+  ggplot(aes(Key, Value, fill = Name))+
+  geom_col(position = "fill", show.legend = FALSE)+
+  geom_text(aes(label = Value), position = position_fill(vjust = 0.5), color = "white")+
+  coord_flip()+
+  facet_wrap(VS~.)+
+  labs(x = NULL, y = NULL)+
+  scale_fill_manual(values = c("#9D152C", "#080808", "#7A1F1E", "#1849CA", "#a71930", "#6f195f", "#AA0505", "#FF3D3D", "#DF1F2D", "#00991f", "#666666", "#9a9a9a"))+
+  theme(
+    # Strip
+    strip.background = element_rect(fill = "darkslategrey"),
+    strip.text = element_text(color = "white", face = "bold"),
+    # Axis
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    # Panel, Plot, Legend Background
+    panel.background = element_rect(fill = "#F6F6F7"),
+    plot.background = element_rect(fill = "#F6F6F7", color = "#F6F6F7"),
+    # Title
+    plot.title = element_text(hjust = 0.5, color = "#0E305D", face = "bold", size = 20)
+    )+
+  labs(title = "Team Iron Man vs Team Cap")
+
+```
+
+## Num of Unique Powers
+```{r message=FALSE, warning=FALSE}
+power %>% 
+  gather(Power, value, -Name) %>% 
+  filter(value != FALSE, Name %in% c(c("Black Panther", "Iron Man", "Black Widow", "Vision", "Spider-Man", "War Machine"),
+             c("Winter Soldier", "Captain America", "Scarlet Witch", "Hawkeye", "Ant-Man", "Falcon"))) %>% 
+  mutate(Team = case_when(
+    Name %in% c("Black Panther", "Iron Man", "Black Widow", "Vision", "Spider-Man", "War Machine") ~ "Team Iron",
+    Name %in% c("Winter Soldier", "Captain America", "Scarlet Witch", "Hawkeye", "Ant-Man", "Falcon") ~ "Team Cap",
+  )) %>% 
+  group_by(Name, Team) %>% 
+  count() %>% 
+  ungroup() %>% 
+  mutate(n = if_else(Team == "Team Cap", -n, n)) %>% 
+  left_join(data.frame(
+    Name = c(c("Black Panther", "Iron Man", "Black Widow", "Vision", "Spider-Man", "War Machine"),
+             c("Winter Soldier", "Captain America", "Scarlet Witch", "Hawkeye", "Ant-Man", "Falcon")),
+    VS = rep(c("Black Panther vs Winter Soldier", "Iron Man vs Captain America", "Black Widow vs Scarlet Witch",
+           "Vision vs Hawkeye", "Spider-Man vs Ant-Man", "War Machine vs Falcon"),2)
+  )) %>% 
+  ggplot(aes(VS, n, fill = Team))+
+  geom_col()+
+  geom_text(aes(label = abs(n)), position = position_stack(vjust = 0.5), color = "white")+
+  coord_flip()+
+  labs(x = NULL, y = NULL, fill = NULL, title = "Team Iron Man vs Team Cap",subtitle = "Num of Unique Powers")+
+  scale_fill_manual(values = c("#1849CA", "#AA0505"))+
+  theme(
+    legend.position = "top",
+    # Panel, Plot, Legend Background
+    panel.background = element_rect(fill = "black"),
+    plot.background = element_rect(fill = "black", color = "black"),
+    legend.background = element_rect(fill = "black"),
+    # Panel Grids
+    panel.grid = element_line(size = 0.1),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    # Legend Key Background Delete
+    legend.key = element_blank(),
+    # Text
+    legend.text = element_text(color = "white"),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(color = "white"),
+    # Title
+    plot.title = element_text(color = "white", face = "bold", size = 20, hjust = 0.5),
+    plot.subtitle = element_text(color = "white", face = "bold", size = 13, hjust = 0.5)
+  )+
+  scale_y_reverse()+
+  geom_hline(aes(yintercept = 0), color = "white")
+```
+
+## Num of Unique Powers & Total Power
+```{r message=FALSE, warning=FALSE}
+power %>% 
+  gather(Power, value, -Name) %>% 
+  filter(value != FALSE, Name %in% c(c("Black Panther", "Iron Man", "Black Widow", "Vision", "Spider-Man", "War Machine"),
+             c("Winter Soldier", "Captain America", "Scarlet Witch", "Hawkeye", "Ant-Man", "Falcon"))) %>% 
+  mutate(Team = case_when(
+    Name %in% c("Black Panther", "Iron Man", "Black Widow", "Vision", "Spider-Man", "War Machine") ~ "Team Iron",
+    Name %in% c("Winter Soldier", "Captain America", "Scarlet Witch", "Hawkeye", "Ant-Man", "Falcon") ~ "Team Cap",
+  )) %>% 
+  group_by(Name, Team) %>% 
+  count() %>% 
+  ungroup() %>% 
+  left_join(stats %>% select(Name, Total)) %>% 
+  ggplot(aes(n, Total, color = Team, label = Name))+
+  geom_point(size = 3,alpha = 0.6)+
+  geom_line(alpha = 0.6)+
+  geom_text(hjust = 1.1)+
+  scale_color_manual(values = c("#1849CA", "#AA0505"))+
+  labs(x = "Num of Unique Powers", y = "Total Power", title = "Team Iron Man vs Team Cap")+
+   theme(
+    legend.position = "top",
+    # Panel, Plot, Legend Background
+    panel.background = element_rect(fill = "black"),
+    plot.background = element_rect(fill = "black", color = "black"),
+    legend.background = element_rect(fill = "black"),
+    # Panel Grids
+    panel.grid = element_line(size = 0.1),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    # Legend Key Background Delete
+    legend.key = element_blank(),
+    # Text
+    legend.text = element_text(color = "white"),
+    axis.title = element_text(color = "white"),
+    axis.text.x = element_text(color = "white"),
+    axis.text.y = element_text(color = "white"),
+    # Title
+    plot.title = element_text(color = "white", face = "bold", size = 20, hjust = 0.5)
+  )+
+  ylim(50, 550)+
+  xlim(-1,21)
+```
+
+
+<center><img
+src="https://thumbs.gfycat.com/EnormousWellgroomedFluke-size_restricted.gif" style="width:100%;height:100%;">
+</center>
+
+<hr>
