@@ -1,0 +1,429 @@
+---
+title: "AVATAR: The Last Air Bender Data Analysis & Visualization"
+subtitle: '#TidyTuesday'
+author: 
+  name: "Ekrem Bayar"
+date: '`r Sys.Date()`'
+output:
+  html_document:
+    toc: yes
+    number_sections: yes
+    code_folding: hide
+    theme: spacelab
+    highlight: tango
+---
+
+
+<center>
+<p style="font-size:22pt; font-style:bold; font-family: 'Slayer'">
+“ONLY THE AVATAR CAN MASTER ALL FOUR ELEMENTS AND BRING BALANCE TO THE WORLD!” 
+</p>
+</center>
+
+<center><img
+src="https://i.pinimg.com/originals/ce/27/87/ce27870499a90e05363c91afe6b04aed.png" style="width:40%;height:100%;">
+</center>
+
+[AVATAR: The Last Air Bender data](https://www.kaggle.com/ekrembayar/avatar-the-last-air-bender) includes IMDB Rating and transcripts. You can find all seasons (books) and episodes on dataset.
+
+The goal of this notebook is to introduce data and make some graphs about the serie. 
+
+**I use Slayer font family for graphs but Slayer font does not work on Kaggle. Also I share the notebook on [RPubs](https://rpubs.com/EkremBayar/648453). You can see original graphs from RPubs.**
+
+# **Libraries / Data** {.tabset .tabset-fade .tabset-pills}
+
+## Libraries
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(extrafont) # Import Fonts
+install.packages(c("tvthemes", "ggimage"))
+library(tvthemes) # Avatar Themes
+library(tidytext)
+library(ggimage)
+library(cowplot)
+import_avatar()
+```
+
+
+## Data
+
+```{r}
+avatar <- read.csv("../input/avatar-the-last-air-bender/avatar.csv", stringsAsFactors = FALSE)
+avatar_data <- read.csv("../input/avatar-the-last-air-bender/avatar_data.csv")
+scenes <- read.csv("../input/avatar-the-last-air-bender/scenes.csv", stringsAsFactors = FALSE)
+series <- read.csv("../input/avatar-the-last-air-bender/series_names.csv")
+
+
+avatar$character <- str_replace_all(avatar$character, "King Bumi", "Bumi")
+avatar$character <- str_replace_all(avatar$character, "Avatar Roku", "Roku")
+avatar$character <- str_replace_all(avatar$character, "Aang:", "Aang")
+
+chapters <- avatar %>% 
+  select(book, book_num,chapter,chapter_num, imdb_rating, writer) %>% 
+  distinct() %>% 
+  arrange(book_num) 
+chapters <- chapters %>% 
+  mutate(index = row_number(), book = factor(book, levels = c("Water", "Earth", "Fire")),
+         numofwriters = sapply(str_split(chapters$writer, ","), length))
+```
+
+### **Data Frames** {.tabset .tabset-fade .tabset-pills}
+
+#### Avatar
+
+```{r message=FALSE, warning=FALSE}
+as_tibble(avatar)
+```
+
+#### Avatar Data
+
+```{r message=FALSE, warning=FALSE}
+as_tibble(avatar_data)
+```
+
+#### Scenes
+
+```{r message=FALSE, warning=FALSE}
+as_tibble(scenes)
+```
+
+#### Series
+
+```{r message=FALSE, warning=FALSE}
+as_tibble(series)
+```
+
+# **Data Analysis & Visualization**
+
+<hr>
+
+<center><img
+src="https://steamuserimages-a.akamaihd.net/ugc/903393148752017280/6124EEF1AD9A6A728E068068B426F9F82949E293/" style="width:100%;height:100%;">
+</center>
+
+## Appa & Momo Name Frequency
+
+
+```{r fig.height=15, fig.width=25, message=FALSE, warning=FALSE}
+p1 <- avatar %>% 
+  filter(!is.na(character_words)) %>% 
+  unnest_tokens(word,character_words) %>% 
+  count(word) %>% 
+  filter(word %in% c("momo", "appa")) %>% 
+  mutate(word = str_to_title(word),Animal = 0) %>% 
+  ggplot(aes(Animal, n, fill = word))+
+  geom_col(position = "fill")+
+  geom_text(aes(label = n), position = position_fill(vjust = 0.5), color = "#DBC5A0", family = "Slayer", size = 10)+
+  coord_flip()+
+  xlim(-10, 1)+
+  theme_avatar(text.font = "Slayer",legend.text.size = 24)+
+  theme(
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(face = "bold", size = 30),
+    plot.subtitle = element_text(size = 25)
+  )+
+  labs(fill = NULL, title = "AVATAR: The Last Air Bender",
+       subtitle = "Appa & Momo NAME Frequency")+
+  scale_fill_manual(values = c("#C24841", "#8B5B45"))+
+  scale_y_reverse()
+
+
+ggdraw() +
+  draw_plot(p1) +
+  draw_image("https://vignette.wikia.nocookie.net/nicktoonstoonswars/images/d/d2/Momo.png/revision/latest/scale-to-width-down/340?cb=20120125074822", scale=0.3, y=-0.1, x=0.25)+
+  draw_image("https://animebathscenewiki.com/images/0/06/Appa.png", scale=0.5, y=-0.1, x=-0.20)
+```
+
+## Character Name Frequency
+
+```{r fig.height=15, fig.width=25, message=FALSE, warning=FALSE}
+p2 <- avatar %>% 
+  filter(!is.na(character_words)) %>% 
+  unnest_tokens(word,character_words) %>% 
+  count(word, sort = T) %>% 
+  filter(word %in% c("aang", "katara", "sokka", "toph", "zuko", "iroh", "azula", "ozai", "roku", "suki")) %>% 
+  mutate(word = str_to_title(word),Animal = 0) %>% 
+  ggplot(aes(Animal, n, fill = word))+
+  geom_col()+
+  coord_flip()+
+  xlim(-10, 1)+
+  theme_avatar(text.font = "Slayer",legend.text.size = 24)+
+  theme(
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(face = "bold", size = 30),
+    plot.subtitle = element_text(size = 25)
+  )+
+  labs(fill = NULL, title = "AVATAR: The Last Air Bender",
+       subtitle = "Character Name Frequency")+
+  scale_fill_manual(values = c("#EEB05A", "#a10000", "#ecb100", "#174D70", "red","#572530", "#949BBC", 
+                               "#C7C45E", "#4C7022", "#FF4500"))+
+  scale_y_reverse()+ylim(1700,-200)
+
+ggdraw() +
+  draw_plot(p2) +
+  draw_image("https://upload.wikimedia.org/wikipedia/tr/7/77/Aang_karakteri.png", scale=0.25, y=-0.1, x=-0.4)+
+  draw_image("https://giantbomb1.cbsistatic.com/uploads/square_small/46/462814/3197916-0704444183-azula.png", scale=0.25, y=-0.1, x=-0.25)+
+  draw_image("https://vignette.wikia.nocookie.net/vsbattles/images/e/e0/Render12.png/revision/latest/scale-to-width-down/340?cb=20160418071118", scale=0.24, y=-0.1, x=-0.12)+
+  draw_image("https://www.nicepng.com/png/full/157-1576012_katara-de-avatar-katara-transparent.png", scale=0.25, y=-0.1, x=0.05)+
+  draw_image("https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/4162efc0-2b20-4d54-a195-a45691d720ed/d5aec1p-67d49b90-cdb0-4868-9352-09ecd472e044.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOiIsImlzcyI6InVybjphcHA6Iiwib2JqIjpbW3sicGF0aCI6IlwvZlwvNDE2MmVmYzAtMmIyMC00ZDU0LWExOTUtYTQ1NjkxZDcyMGVkXC9kNWFlYzFwLTY3ZDQ5YjkwLWNkYjAtNDg2OC05MzUyLTA5ZWNkNDcyZTA0NC5wbmcifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6ZmlsZS5kb3dubG9hZCJdfQ.s4CVpa00G7kjoFWzKzqp__62DUVXFekTS7OHtzfvrnY", scale=0.22, y=-0.1, x=0.2)+
+  draw_image("https://upload.wikimedia.org/wikipedia/en/thumb/4/46/Toph_Beifong.png/220px-Toph_Beifong.png", scale=0.22, y=-0.1, x=0.32)+
+  draw_image("https://vignette.wikia.nocookie.net/nickelodeon/images/7/73/Avatar_%3D_Zuko_001.png/revision/latest?cb=20090616194622", scale=0.3, y=-0.1, x=0.43)
+
+```
+
+## Series Ratings
+
+```{r message=FALSE, warning=FALSE, fig.width=25, fig.height=15}
+logo <- data.frame(
+  logo = c(
+    "https://cdn.pixabay.com/photo/2018/06/12/05/13/earth-kingdom-3470003_960_720.png",
+    "https://www.worldanvil.com/media/cache/skyscraper/uploads/images/03451c08855be9184dcbf736fe74694c.png",
+    "https://vignette.wikia.nocookie.net/civilization-v-customisation/images/8/85/Water_Tribe_emblem.png/revision/latest?cb=20150902145222"
+    ), stringsAsFactors = FALSE
+)
+
+ggplot(cbind(series, logo), aes(book, series_rating, fill = book))+
+  geom_col(width = 1)+
+  geom_image(aes(image = logo),position = position_stack(vjust = 0.5), size = 0.099)+
+  coord_polar()+
+  scale_fill_manual(values = c("#015E05", "#a10000", "#174D79"))+
+  theme_avatar(text.font = "Slayer", axis.text.color = c("#015E05", "#a10000", "#174D79"),
+               axis.text.size = 28, title.size = 30, subtitle.size = 25, 
+               legend.text.size = 20, legend.title.size = 20)+
+  labs(title = "AVATAR: The Last Air Bender",
+       subtitle = "Series Rating", x = NULL, y = NULL, fill = "Book")+
+  geom_text(aes(label = round(series_rating, 2)),position = position_stack(vjust = 0.85), color = "white", size = 10, family = "Slayer")+
+  theme(
+    plot.title = element_text(face = "bold", size = 30),
+    plot.subtitle = element_text(size = 25),
+    axis.text.y = element_blank()
+  )
+```
+
+## IMDB Ratings & Directors
+
+```{r fig.height=15, fig.width=25, message=FALSE, warning=FALSE}
+directors <- avatar %>% 
+  select(book, chapter, chapter_num, director, imdb_rating) %>% distinct()
+
+episodes <- directors %>% 
+  filter(!is.na(imdb_rating)) %>% 
+  group_by(director) %>% 
+  filter(imdb_rating == min(imdb_rating) | imdb_rating == max(imdb_rating), .preserve = FALSE) %>% 
+  ungroup() %>% 
+  mutate(chapter = if_else(chapter %in% c("Sozin's Comet, Part 3: Into the Inferno", 
+                                          "Sozin's Comet, Part 4: Avatar Aang"),
+                           "Sozin's Comet Part 3-4 \n Into the Inferno & Avatar Aang", chapter))
+
+
+p3 <- ggplot(directors, aes(imdb_rating, director))+
+  geom_boxplot(fill = NA, color = "#D2CFAB")+
+  geom_point(size = 4, aes(color = book))+
+  geom_text(episodes, mapping = aes(imdb_rating, director, color = book, label = chapter),
+            family = "Slayer", show.legend = FALSE, vjust = 1.3, angle = 25, size = 5)+
+  theme_avatar(text.font = "Slayer", axis.text.size = 15, title.size = 30,subtitle.size = 25,
+               legend.title.size = 19, legend.text.size = 16, axis.title.size = 20)+
+  scale_color_manual(values = c("#4C7022", "#FF4500","#0047ab"))+
+  theme(plot.title = element_text(face = "bold"))+
+  labs(title = "AVATAR: The Last Air Bender", subtitle = "IMBD Ratings & Directors", color = "Book", y = "Director", x = "IMDB Rating")+
+  xlim(6.5, 14)
+
+ggdraw() +
+  draw_plot(p3) +
+  draw_image("https://wallpapercave.com/wp/wp4943499.png", scale=1, y=0, x=0.38)
+```
+
+## IMDB Ratings & Num of Writers
+
+```{r fig.height=15, fig.width=25, message=FALSE, warning=FALSE}
+ggplot(chapters, aes(numofwriters, imdb_rating, color = book))+
+  geom_point(size = 6)+
+  geom_text(chapters %>% 
+              filter(numofwriters > 2) %>% 
+              mutate(chapter = if_else(chapter %in% c("Sozin's Comet, Part 3: Into the Inferno", 
+                                                      "Sozin's Comet, Part 4: Avatar Aang"),
+                                       "Sozin's Comet Part 3-4 \n Into the Inferno & Avatar Aang", chapter)), 
+            mapping = aes(label = chapter), vjust = 1.5, family = "Slayer", show.legend = FALSE, size = 7)+
+  scale_color_manual(values = c("#0047ab","#4C7022", "#FF4500"))+
+  labs(x = "Num of Writers", y = "IMDB Rating", title = "AVATAR: The Last Air Bender",
+       subtitle = "Num of Writers & IMDB Ratings", color = "Book")+
+  xlim(1,11)+ylim(6.8, 10)+
+  theme_avatar(text.font = "Slayer", axis.text.size = 15, title.size = 30,subtitle.size = 25,
+               legend.title.size = 19, legend.text.size = 16, axis.title.size = 20)+
+  theme(
+    plot.title = element_text(face = "bold")
+  )
+```
+
+## Zuko's Honor
+
+<center><img
+src="https://secureservercdn.net/198.71.233.109/gkl.528.myftpupload.com/wp-content/uploads/2018/09/honor.gif" style="width:100%;height:100%;">
+</center>
+
+```{r fig.height=15, fig.width=25, message=FALSE, warning=FALSE}
+hnr <- avatar %>%
+  filter(!is.na(character_words), character == "Zuko") %>% 
+  unnest_tokens(word,character_words) %>% 
+  mutate(honor = if_else(word == "honor", 1, 0)) %>% 
+  distinct() %>% 
+  group_by(book, book_num, chapter, chapter_num, honor) %>% 
+  summarise(honor = sum(honor)) %>% 
+  ungroup() %>% 
+  arrange(book_num, chapter_num)
+
+rbind(hnr %>% filter(honor == 0, !chapter %in% (hnr %>% filter(honor == 1) %>% pull(chapter))),
+      hnr %>% filter(honor == 1)) %>% 
+  mutate(book = factor(book, levels = c("Water", "Earth", "Fire"))) %>% 
+  arrange(book_num, chapter_num) %>% 
+  ggplot(aes(x = chapter_num, y = book, fill = as.factor(honor))) +
+  geom_tile(color = "#572530")+
+  labs(y = NULL, x = "Chapter", fill = "Honor Word", 
+       title = "AVATAR: The Last Air Bender",
+       subtitle = "Prince Zuko & His Honor")+
+  theme_avatar(text.font = "Slayer", legend.text.size = 20, legend.title.size = 20, axis.title.size = 20)+
+  theme(
+    axis.text.y = element_text(color = c("#174D79","#015E05", "#a10000"), size = 30),
+    axis.text.x = element_text(size = 20),
+    plot.title = element_text(face = "bold", size = 30),
+    plot.subtitle = element_text(size = 25)
+    )+
+  scale_fill_avatar()
+```
+
+<center>
+<p style="font-size:20pt; font-style:bold; font-family: 'Slayer'">
+**Iroh's Speech**
+</p>
+</center>
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/aYkuuu9u3EI" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+## My Cabbages!
+
+<center><img
+src="https://thumbs.gfycat.com/AbsoluteZestyCaecilian-size_restricted.gif" style="width:70%;height:100%;">
+</center>
+
+```{r fig.height=15, fig.width=25, message=FALSE, warning=FALSE}
+avatar %>%
+  filter(!is.na(character_words)) %>% 
+  mutate(Cabbage = if_else(character == "Cabbage merchant", 1,0),
+         book = factor(book, levels = c("Water", "Earth", "Fire"))) %>% 
+  select(book, chapter, Cabbage, chapter_num) %>% 
+  distinct() %>% 
+  ggplot(aes(x = chapter_num, y = book, fill = as.factor(Cabbage)))+#, label = chapter)) +
+  geom_tile(color = "#572530")+
+  #geom_text(size = 1,angle = 90, color = "#FEFED8", family = "Slayer", size = 15)+
+  scale_fill_manual(values = c("#FEFED8","#4C7022"))+
+  theme_avatar(text.font = "Slayer", legend.text.size = 20, legend.title.size = 20, axis.title.size = 20)+
+  labs(fill = NULL, y = NULL, x = "Chapter", title = "AVATAR: The Last Airbender",
+       subtitle = "Cabbage Merchant: My Cabbages!")+
+  theme(
+    axis.text.y = element_text(color = c("#174D79", "#015E05", "#a10000"), size = 30),
+    axis.text.x = element_text(size = 20),
+    plot.title = element_text(face = "bold", size = 30),
+    plot.subtitle = element_text(size = 25)
+  )
+```
+
+
+## Bigrams of Scenes
+
+```{r fig.height=25, fig.width=25, message=FALSE, warning=FALSE}
+sc <- scenes %>% 
+  left_join(
+    avatar %>% 
+      select(id, book, chapter_num, chapter_num, character)
+  )
+
+bigram <- sc %>% 
+  unnest_tokens(word, scene_description, token = "ngrams", n = 2) %>% 
+  separate(word, c("word1", "word2"), sep = " ") %>% 
+  anti_join(stop_words %>% rename("word1" = word)) %>% 
+  anti_join(stop_words %>% rename("word2" = word)) %>% 
+  filter(!is.na(word1)) %>% 
+  unite(word, word1, word2, sep = " ") %>% 
+  group_by(character) %>% 
+  count(word, sort = TRUE) %>% 
+  ungroup() %>% 
+  filter(character %in% c("Aang", "Sokka", "Azula", "Iroh", "Katara", "Roku", "Toph", "Zuko")) %>% 
+  group_by(character) %>% 
+  do(head(.,20))
+
+bigram %>% 
+  ggplot(aes(reorder_within(word, n, n), n, fill = character))+
+  geom_col(show.legend = FALSE)+
+  coord_flip()+
+  facet_wrap(character~., scales = "free")+
+  labs(fill = NULL, x = NULL, y = NULL, title = "AVATAR: The Last Air Bender", subtitle = "Bigrams of Scenes")+
+  theme_avatar(text.font = "Slayer",title.size = 30,subtitle.size = 25, axis.text.size = 16)+
+  theme(
+    strip.text = element_text(family = "Slayer", size = 25),
+    strip.background = element_rect(fill = "#DBC5A0"),
+    axis.text.y = element_text(color = c("#174D79", "#015E05", "#a10000")),
+    plot.title = element_text(face = "bold")
+  )+
+  scale_fill_manual(values = c("#EEB05A", "#a10000", "#ecb100", "#174D70", "#572530", "#949BBC", "#4C7022", "#FF4500"))+
+  scale_x_reordered()
+```
+
+## Bigrams of The All Four Elements
+
+```{r fig.height=15, fig.width=25, message=FALSE, warning=FALSE}
+avatar %>% 
+  filter(!is.na(character_words)) %>% 
+  unnest_tokens(word, character_words, token = "ngrams", n = 2) %>% 
+  mutate(word = str_remove_all(word, "'s")) %>% 
+  count(word, sort = T) %>%
+  filter(!is.na(word)) %>% 
+  separate(word, c("word1", "word2"), sep = " ") %>% 
+  filter(word1 %in% c("water", "air", "earth", "fire")) %>% 
+  anti_join(stop_words %>% rename("word2" = word)) %>% 
+  ggplot(aes(reorder_within(word2, n, n),n, fill = word1))+
+  geom_col(show.legend = FALSE)+
+  facet_wrap(word1~., scales = "free")+
+  coord_flip()+
+  scale_x_reordered()+
+  labs(x = NULL, y = NULL, 
+       title = "AVATAR: The Last Air Bender",
+       subtitle = "Bigrams of the all four elements")+
+  theme_avatar(text.font = "Slayer",title.size = 30,subtitle.size = 25, axis.text.size = 16)+
+  theme(
+    strip.text = element_text(family = "Slayer", size = 25),
+    strip.background = element_rect(fill = "#DBC5A0"),
+    axis.text.y = element_text(color = c("#174D79", "#015E05", "#a10000")),
+    plot.title = element_text(face = "bold")
+  )+
+  scale_fill_manual(values = c("#87AFD1","#015E05", "#a10000", "#174D79"))
+```
+
+# **The End**
+
+<center>
+<p style="font-size:20pt; font-style:bold; font-family: 'Slayer'">
+If you like the notebook, don't forget to give upvote! ;)
+</p>
+</center>
+
+<center>
+<p style="font-size:20pt; font-style:bold; font-family: 'Slayer'">
+**Check [my profile](https://www.kaggle.com/ekrembayar) to see other notebooks.**
+</p>
+</center>
+
+
+<center><img
+src="https://media3.giphy.com/media/W3fUf0VuXtQqctm0E4/giphy.gif" style="width:100%;height:100%;">
+</center>
+
+<hr>
+
+# **Agni Kai**
+<iframe width="560" height="315" src="https://www.youtube.com/embed/kYX1XEVvvXU" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
